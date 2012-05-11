@@ -2,12 +2,21 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
 
     <PreferenceCategory android:title="Basic" >
-        <ListPreference android:key="show_speed" android:summary="Set the speed of the slide show" android:title="Slide show speed" android:entryValues="@array/show_speed_values" android:entries="@array/show_speed" android:defaultValue="5"/><ListPreference
+        <ListPreference
+            android:defaultValue="5"
+            android:entries="@array/show_speed"
+            android:entryValues="@array/show_speed_values"
+            android:key="show_speed"
+            android:summary="Set the speed of the slide show"
+            android:title="Slide show speed" />
+        <ListPreference
+            android:defaultValue="100"
             android:entries="@array/fetch_count"
             android:entryValues="@array/fetch_count"
             android:key="fetch_count"
-            android:summary="Set the number of images that will be fetched every time the application is started. Maximum 500."
-            android:title="Number of images to fetch" android:defaultValue="100"/>
+            android:summary="Set the number of images that will be fetched every time the application is started. Requires a restart."
+            android:title="Number of images to fetch" />
+        <!--
         <ListPreference
             android:defaultValue="Auto"
             android:entries="@array/image_sizes"
@@ -15,13 +24,13 @@
             android:key="image_resolution"
             android:summary="Choose the size of images to be fetched."
             android:title="Image resultion" />
-        
+        -->
     </PreferenceCategory>
     <PreferenceCategory android:title="Advanced" >
-         <ListPreference
+        <ListPreference
+            android:defaultValue="1"
             android:entries="@array/cache_duration_label"
             android:entryValues="@array/cache_duration"
-            android:defaultValue="1"
             android:key="cache_duration"
             android:summary="Enter how long an image will be cached on the device."
             android:title="Images will be cached for (days):" />
