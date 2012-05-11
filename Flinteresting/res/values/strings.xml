@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="hello">SplashActivity!</string>
+    <string name="app_name">FlickrCast</string>
+    <string-array name="image_sizes">
+        <item >Auto</item>
+        <item >Small</item>
+        <item >Medium</item>
+        <item >Large</item>
+    </string-array>
+    <string-array name="fetch_count">
+        <item >100</item>
+        <item >200</item>
+        <item >300</item>
+        <item >400</item>
+        <item >500</item>
+    </string-array>
+    <string-array name="cache_duration">
+        <item >1</item>
+        <item >2</item>
+        <item >3</item>
+    </string-array>
+    <string-array name="cache_duration_label">
+        <item >One day</item>
+        <item >Two days</item>
+        <item >Three days</item>
+    </string-array>
+    <string-array name="show_speed">
+        <item >Fast</item>
+        <item >Medium</item>
+        <item >Slow</item>
+    </string-array>
+     <string-array name="show_speed_values">
+        <item>2</item>
+        <item>5</item>
+        <item>10</item>
+    </string-array>
+    
+</resources>
