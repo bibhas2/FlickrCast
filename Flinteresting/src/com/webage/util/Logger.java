@@ -6,10 +6,14 @@ public class Logger {
 	static String TAG = "Flinteresting";
 	
 	public static void v(String str) {
-		Log.v(TAG, str);
+		if (Log.isLoggable(TAG, Log.VERBOSE)) {
+			Log.v(TAG, str);
+		}
 	}
 	public static void v(String str, Throwable t) {
-		Log.v(TAG, str, t);
+		if (Log.isLoggable(TAG, Log.VERBOSE)) {
+			Log.v(TAG, str, t);
+		}
 	}
 	public static void i(String str) {
 		Log.i(TAG, str);
