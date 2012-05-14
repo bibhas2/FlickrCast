@@ -3,12 +3,12 @@
     android:id="@+id/frame"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent" >
-
- 
+
         <ImageView
             android:id="@+id/imageView"
             android:layout_width="fill_parent"
-            android:layout_height="fill_parent" />
+            android:layout_height="fill_parent"
+            android:keepScreenOn="true" />
 
     <TextView
         android:id="@+id/titleText"
