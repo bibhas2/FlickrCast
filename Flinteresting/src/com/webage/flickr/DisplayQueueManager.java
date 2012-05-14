@@ -28,6 +28,7 @@ public class DisplayQueueManager extends TimerTask {
 	MainActivity mainActivity;
 	boolean cancelled = false;
 	PhotoDAO dao;
+	int countEmptyQueueReads = 0;
 
 	public DisplayQueueManager(MainActivity a) {
 		mainActivity = a;
@@ -47,8 +48,15 @@ public class DisplayQueueManager extends TimerTask {
 				Logger.v("Display queue is empty. Will try later.");
 				if (!cancelled) {
 					mainActivity.postWaitSign();
+					++countEmptyQueueReads;
+					if (countEmptyQueueReads >= 2) {
+						mainActivity.postMessage("Unable to load images. Trying...");
+						countEmptyQueueReads = 0;
+					}
 				}
 				return;
+			} else {
+				countEmptyQueueReads = 0;
 			}
 			prepareAndShow(p);
 		} catch (InterruptedException e) {
