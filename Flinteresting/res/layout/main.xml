@@ -3,12 +3,13 @@
     android:id="@+id/frame"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent" >
-
+
         <ImageView
             android:id="@+id/imageView"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
-            android:keepScreenOn="true" />
+            android:keepScreenOn="true"
+            android:src="@drawable/splash" />
 
     <TextView
         android:id="@+id/titleText"
@@ -18,13 +19,14 @@
         android:layout_centerHorizontal="true"
         android:background="@drawable/rounded"
         android:text="" />
-
+
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true" />
+        android:layout_alignParentRight="true"
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/menuBar"

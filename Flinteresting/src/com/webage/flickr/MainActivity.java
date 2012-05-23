@@ -22,8 +22,7 @@ import android.widget.Toast;
 
 import com.webage.util.Logger;
 
-public class MainActivity extends Activity implements Runnable {
-	static ArrayList<Photo> photoList = null;
+public class MainActivity extends Activity {
 	RequestQueueManager reqMgr;
 	Photo currentPhoto = null;
 	Bitmap currentBitmap;
@@ -33,10 +32,6 @@ public class MainActivity extends Activity implements Runnable {
 	View menuBar;
 	boolean wasPaused = false;
 	boolean menuShown = true;
-
-	public static void setList(ArrayList<Photo> list) {
-		photoList = list;
-	}
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -82,7 +77,6 @@ public class MainActivity extends Activity implements Runnable {
 		});
 
 		reqMgr = new RequestQueueManager(this);
-		queueRequest();
 		// Start the queue managers
 		reqMgr.execute();
 		
@@ -119,23 +113,7 @@ public class MainActivity extends Activity implements Runnable {
 	}
 
 	protected void showPreviousImage() {
-		int i;
-		
-		for (i = 0; i < photoList.size(); ++i) {
-			Photo p = photoList.get(i);
-			if (p == currentPhoto) {
-				break;
-			}
-		}
-		--i;
-		
-		if (i < 0) {
-			//Show last one
-			i = photoList.size() - 1;
-		}
-		Logger.v("Showing previous image: " + i);
-		Photo prevPhoto = photoList.get(i);
-		reqMgr.getDisplayManager().showImmediate(prevPhoto);
+		reqMgr.showPreviousImage(currentPhoto);
 	}
 
 	private void manageMenu() {
@@ -193,14 +171,6 @@ public class MainActivity extends Activity implements Runnable {
 		resume();
 	}
 
-	private void queueRequest() {
-		Logger.v("Queueing all photos");
-		for (Photo p : photoList) {
-			reqMgr.addToQueue(p);
-		}
-		Logger.v("Request queue size: " + reqMgr.queue.size());
-	}
-
 	/*
 	 * Called from another thread.
 	 */
@@ -210,15 +180,13 @@ public class MainActivity extends Activity implements Runnable {
 		currentPhoto = p;
 		currentBitmap = bm;
 
-		runOnUiThread(this);
+		runOnUiThread(new Runnable() {
+			public void run() {
+				displayPhoto();
+			}
+		});
 	}
 
-	/*
-	 * Displays an image. Called in main thread.
-	 */
-	public void run() {
-		displayPhoto();
-	}
 
 	private void displayPhoto() {
 		if (reqMgr == null) {
@@ -228,9 +196,6 @@ public class MainActivity extends Activity implements Runnable {
 		progressBar.setVisibility(View.GONE);
 		imageView.setImageBitmap(currentBitmap);
 		titleText.setText(currentPhoto.getTitle());
-		if (reqMgr.isEmpty()) {
-			queueRequest();
-		}
 	}
 
 	@Override

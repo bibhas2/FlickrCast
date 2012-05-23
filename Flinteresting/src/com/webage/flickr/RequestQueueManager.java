@@ -7,9 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
 
 import android.media.MediaScannerConnection;
 import android.net.Uri;
@@ -22,10 +20,11 @@ public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 	public static final int MAX_SIZE = 10;
 	private static final int DEFAULT_CACHE_DURATION = 1;
 	//This queue is unbounded
-	BlockingQueue<Photo> queue = new LinkedBlockingQueue<Photo>();
 	MainActivity mainActivity;
 	DisplayQueueManager displayMgr;
 	PhotoDAO dao;
+	int currentIndex = 0;
+	ArrayList<Photo> photoList = null;
 
 	public RequestQueueManager(MainActivity a) {
 		mainActivity = a;
@@ -37,23 +36,18 @@ public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 		Logger.v("RequestQueueManager starting up.");
 		//Start the display queue manager
 		displayMgr.execute();
+		
+		//Get master list
+		photoList = dao.fetchInterestingList();
+		if (photoList == null) {
+			mainActivity.postMessage("Failed to connect to Flickr");
+			return null;
+		}
 		//Purge cache
 		purgeCache();
 		
 		while (isCancelled() == false) {
-			Photo p = null;
-
-			try {
-				p = queue.poll(10, TimeUnit.SECONDS);
-			} catch (InterruptedException e) {
-			}
-			if (p == null) {
-				Logger.v("No photo in request queue.");
-				continue;
-			}
-			if (isCancelled()) {
-				continue;
-			}
+			Photo p = photoList.get(currentIndex);
 
 			try {
 				processPhoto(p);
@@ -61,6 +55,10 @@ public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 			} catch (Exception e) {
 				Logger.v("Failed to download image", e);
 				removeCache(p);
+			}
+			++currentIndex;
+			if (currentIndex == photoList.size()) {
+				currentIndex = 0;
 			}
 		}
 		Logger.v("RequestQueueManager ending work.");
@@ -127,6 +125,11 @@ public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 		}
 	}
 
+	/**
+	 * Called from main thread.
+	 * 
+	 * @param p
+	 */
 	public void savePhoto(Photo p) {
 		new SaveProcessor(p).execute();
 	}
@@ -206,14 +209,6 @@ public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 		}
 	}
 
-	public void addToQueue(Photo photo) {
-		Logger.v("Adding to request queue: " + photo.getId());
-		queue.add(photo);
-	}
-	
-	public boolean isEmpty() {
-		return queue.isEmpty();
-	}
 	
 	public void pause() {
 		/*
@@ -228,5 +223,25 @@ public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 
 	public DisplayQueueManager getDisplayManager() {
 		return displayMgr;
+	}
+
+	public void showPreviousImage(Photo currentPhoto) {
+		int i;
+		
+		for (i = 0; i < photoList.size(); ++i) {
+			Photo p = photoList.get(i);
+			if (p == currentPhoto) {
+				break;
+			}
+		}
+		--i;
+		
+		if (i < 0) {
+			//Show last one
+			i = photoList.size() - 1;
+		}
+		Logger.v("Showing previous image: " + i);
+		Photo prevPhoto = photoList.get(i);
+		getDisplayManager().showImmediate(prevPhoto);
 	}
 }

@@ -17,6 +17,7 @@ import com.webage.util.Logger;
 import com.webage.util.XMLHttpRequestEventTarget;
 import com.webage.util.XmlHttpRequest;
 import com.webage.util.XmlHttpRequestImpl;
+import com.webage.util.XmlUtil;
 
 public class PhotoDAO {
 	private static final int DEFAULT_FETCH_COUNT = 100;
@@ -66,30 +67,7 @@ public class PhotoDAO {
 			public void onLoad() {
 				Logger.v("Done downloading.");
 				Document doc = req.getResponseXML();
-				NodeList list = doc.getElementsByTagName("photo");
-				ArrayList<Photo> photoList = new ArrayList<Photo>(500);
-				
-				for (int i = 0; i < list.getLength(); ++i) {
-					Element e = (Element) list.item(i);
-					Photo p = new Photo();
-					
-					p.setId(e.getAttribute("id"));
-					p.setTitle(e.getAttribute("title"));
-					
-					String farm = e.getAttribute("farm");
-					String server = e.getAttribute("server");
-					String secret = e.getAttribute("secret");
-					String url = "http://farm" + farm + ".staticflickr.com/" + server + "/" + p.getId() + "_" + secret;
-					if (qualityFlag != null) {
-						url = url + "_" + qualityFlag;
-					}
-					url += ".jpg";
-					
-					p.setUrl(url);
-					photoList.add(p);
-				}
-				//Randomize the list
-				Collections.shuffle(photoList);
+				ArrayList<Photo> photoList = buildPhotoList(qualityFlag, doc);
 				delegate.onLoad(photoList);
 			}
 
@@ -101,6 +79,18 @@ public class PhotoDAO {
 		});
 		req.send(null);
 		delegate.onLoadEnd();
+	}
+	
+	public ArrayList<Photo> fetchInterestingList() {
+		int fetchCount = getPrefAsInt("fetch_count", DEFAULT_FETCH_COUNT);
+		final String qualityFlag = computeQualityFlag();
+		
+		Logger.v("Quality flag: " + qualityFlag);
+		
+		Document doc = XmlUtil.loadDocument("http://api.flickr.com/services/rest/?method=flickr.interestingness.getList&api_key=8fa47539dde7b426a299aa41da9b02fb&per_page=" + fetchCount);
+		ArrayList<Photo> photoList = buildPhotoList(qualityFlag, doc);
+		
+		return photoList;
 	}
 
 	private String computeQualityFlag() {
@@ -123,6 +113,35 @@ public class PhotoDAO {
 		
 		//return max image size
 		return flagList[sizeList.length - 1];
+	}
+
+	private ArrayList<Photo> buildPhotoList(final String qualityFlag,
+			Document doc) {
+		NodeList list = doc.getElementsByTagName("photo");
+		ArrayList<Photo> photoList = new ArrayList<Photo>(500);
+		
+		for (int i = 0; i < list.getLength(); ++i) {
+			Element e = (Element) list.item(i);
+			Photo p = new Photo();
+			
+			p.setId(e.getAttribute("id"));
+			p.setTitle(e.getAttribute("title"));
+			
+			String farm = e.getAttribute("farm");
+			String server = e.getAttribute("server");
+			String secret = e.getAttribute("secret");
+			String url = "http://farm" + farm + ".staticflickr.com/" + server + "/" + p.getId() + "_" + secret;
+			if (qualityFlag != null) {
+				url = url + "_" + qualityFlag;
+			}
+			url += ".jpg";
+			
+			p.setUrl(url);
+			photoList.add(p);
+		}
+		//Randomize the list
+		Collections.shuffle(photoList);
+		return photoList;
 	}
 
 }

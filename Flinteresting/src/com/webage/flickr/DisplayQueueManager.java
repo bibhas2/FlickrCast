@@ -124,7 +124,7 @@ public class DisplayQueueManager extends TimerTask {
 	public void execute() {
 		Logger.v("DisplayQueueManager strating up.");
 		timer = Executors.newSingleThreadScheduledExecutor();
-		taskFuture = timer.scheduleWithFixedDelay(this, 0, getInterval(), TimeUnit.SECONDS);
+		taskFuture = timer.scheduleWithFixedDelay(this, getInterval(), getInterval(), TimeUnit.SECONDS);
 	}
 
 	public void shutdown() {
