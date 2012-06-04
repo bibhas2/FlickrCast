@@ -176,7 +176,7 @@ public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 		}
 	}
 	
-	private void processPhoto(Photo p) throws Exception {
+	public void processPhoto(Photo p) throws Exception {
 		Logger.v("Processing photo from request queue: " + p.getId());
 		
 		if (isCancelled()) {
@@ -225,23 +225,35 @@ public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 		return displayMgr;
 	}
 
-	public void showPreviousImage(Photo currentPhoto) {
-		int i;
-		
-		for (i = 0; i < photoList.size(); ++i) {
-			Photo p = photoList.get(i);
-			if (p == currentPhoto) {
-				break;
-			}
-		}
-		--i;
-		
-		if (i < 0) {
-			//Show last one
-			i = photoList.size() - 1;
-		}
-		Logger.v("Showing previous image: " + i);
-		Photo prevPhoto = photoList.get(i);
-		getDisplayManager().showImmediate(prevPhoto);
+	public Photo getPreviousPhoto(Photo from) {
+	    for (int i = 0; i < photoList.size(); ++i) {
+	        Photo p = photoList.get(i);
+	        if (p == from) {
+	            //Found it!
+	            int resultIdx = i - 1;
+	            if (resultIdx < 0) {
+	                resultIdx = photoList.size() - 1; //wrap to end
+	            }
+	            return photoList.get(resultIdx);
+	        }
+	    }
+	    return null;
+	}
+	/*
+	 * Returns next photo.
+	 */
+	public Photo getNextPhoto(Photo from) {
+	    for (int i = 0; i < photoList.size(); ++i) {
+	    	Photo p = photoList.get(i);
+	        if (p == from) {
+	            //Found it!
+	            int resultIdx = i + 1;
+	            if (resultIdx == photoList.size()) {
+	                resultIdx = 0; //wrap to end
+	            }
+	            return photoList.get(resultIdx);
+	        }
+	    }
+	    return null;
 	}
 }

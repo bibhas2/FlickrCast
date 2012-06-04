@@ -1,12 +1,14 @@
 package com.webage.flickr;
 
 import java.io.File;
-import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.Gravity;
@@ -32,10 +34,12 @@ public class MainActivity extends Activity {
 	View menuBar;
 	boolean wasPaused = false;
 	boolean menuShown = true;
+	ExecutorService threadPool;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
-		Logger.v("MainActivity onCreate called: " + (savedInstanceState != null ? " Has bundle" : "Null bundle"));
+		Logger.v("MainActivity onCreate called: "
+				+ (savedInstanceState != null ? " Has bundle" : "Null bundle"));
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.main);
@@ -44,17 +48,23 @@ public class MainActivity extends Activity {
 		titleText = (TextView) findViewById(R.id.titleText);
 		progressBar = (ProgressBar) findViewById(R.id.progressBar);
 		menuBar = findViewById(R.id.menuBar);
-		
+
 		imageView.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
 				manageMenu();
 			}
 		});
-		
+
 		ImageButton b = (ImageButton) findViewById(R.id.previousImage);
 		b.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
 				showPreviousImage();
+			}
+		});
+		b = (ImageButton) findViewById(R.id.nextImage);
+		b.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				showNextImage();
 			}
 		});
 		b = (ImageButton) findViewById(R.id.saveImage);
@@ -79,8 +89,10 @@ public class MainActivity extends Activity {
 		reqMgr = new RequestQueueManager(this);
 		// Start the queue managers
 		reqMgr.execute();
-		
-		//Hide menu after 1s.
+
+		threadPool = Executors.newCachedThreadPool();
+
+		// Hide menu after 1s.
 		Handler h = new Handler();
 		h.postDelayed(new Runnable() {
 			public void run() {
@@ -91,7 +103,7 @@ public class MainActivity extends Activity {
 
 	protected void openSettings() {
 		Intent i = new Intent(this, SettingsEditorActivity.class);
-		
+
 		startActivity(i);
 	}
 
@@ -101,35 +113,64 @@ public class MainActivity extends Activity {
 		intent.setType("image/jpeg");
 		File o = dao.getCachedFile(currentPhoto);
 		intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(o));
-		startActivity(Intent.createChooser(intent , "Share Image")); 		
+		startActivity(Intent.createChooser(intent, "Share Image"));
 	}
+
 	public boolean onCreateOptionsMenu(Menu menu) {
 		manageMenu();
-	    return false;
+		return false;
 	}
-	
+
 	protected void saveImage() {
 		reqMgr.savePhoto(currentPhoto);
 	}
 
 	protected void showPreviousImage() {
-		reqMgr.showPreviousImage(currentPhoto);
+		threadPool.execute(new Runnable() {
+			public void run() {
+				try {
+					Photo p = reqMgr.getPreviousPhoto(currentPhoto);
+					reqMgr.processPhoto(p);
+					reqMgr.getDisplayManager().prepareAndShow(p);
+				} catch (Exception e) {
+					Logger.v("Error showing previous image", e);
+					postMessage("Failed to download image");
+				}
+			}
+		});
+	}
+
+	protected void showNextImage() {
+		threadPool.execute(new Runnable() {
+			public void run() {
+				try {
+				    Photo p = reqMgr.getNextPhoto(currentPhoto);
+				    if (reqMgr.getDisplayManager().isInQueue(p)) {
+				    	reqMgr.getDisplayManager().showNextInQueue();
+				    } else {
+						reqMgr.processPhoto(p);
+						reqMgr.getDisplayManager().prepareAndShow(p);
+				    }
+				} catch (Exception e) {
+					Logger.v("Error showing previous image", e);
+					postMessage("Failed to download image");
+				}
+			}
+		});
 	}
 
 	private void manageMenu() {
 		TranslateAnimation slide = null;
-		
+
 		if (menuShown == false) {
 			pause();
-			//Show the menu
-			slide = new TranslateAnimation(0, 0, 
-					menuBar.getHeight(), 0);
+			// Show the menu
+			slide = new TranslateAnimation(0, 0, menuBar.getHeight(), 0);
 			menuShown = true;
 			titleText.setVisibility(View.GONE);
 		} else {
-			//Hide menu
-			slide = new TranslateAnimation(0, 0, 0,
-					menuBar.getHeight());
+			// Hide menu
+			slide = new TranslateAnimation(0, 0, 0, menuBar.getHeight());
 			menuShown = false;
 			titleText.setVisibility(View.VISIBLE);
 			resume();
@@ -139,7 +180,7 @@ public class MainActivity extends Activity {
 
 		menuBar.startAnimation(slide);
 	}
-	
+
 	@Override
 	protected void onPause() {
 		Logger.v("MainActivity onPause");
@@ -154,6 +195,7 @@ public class MainActivity extends Activity {
 		reqMgr.pause();
 		wasPaused = true;
 	}
+
 	protected void resume() {
 		if (menuShown) {
 			return;
@@ -187,7 +229,6 @@ public class MainActivity extends Activity {
 		});
 	}
 
-
 	private void displayPhoto() {
 		if (reqMgr == null) {
 			// This activity has been destroyed already
@@ -201,6 +242,7 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onDestroy() {
 		Logger.v("MainActivity onDestroy");
+		threadPool.shutdown();
 		reqMgr.shutdown();
 		reqMgr = null;
 		super.onDestroy();
@@ -217,15 +259,16 @@ public class MainActivity extends Activity {
 			}
 		});
 	}
+
 	public void postMessage(final String msg) {
 		runOnUiThread(new Runnable() {
 			public void run() {
 				if (reqMgr != null) {
 					// This activity has not been destroyed
-					Toast toast = Toast.makeText(MainActivity.this, 
-						    msg, Toast.LENGTH_SHORT);
-					toast.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.CENTER_VERTICAL,
-					        0, 0);
+					Toast toast = Toast.makeText(MainActivity.this, msg,
+							Toast.LENGTH_SHORT);
+					toast.setGravity(Gravity.CENTER_HORIZONTAL
+							| Gravity.CENTER_VERTICAL, 0, 0);
 					toast.show();
 				}
 			}

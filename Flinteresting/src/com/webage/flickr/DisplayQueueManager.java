@@ -38,6 +38,10 @@ public class DisplayQueueManager extends TimerTask {
 	public void run() {
 		Logger.v("Display queue manager timer fired.");
 
+		showNextInQueue();
+	}
+
+	public void showNextInQueue() {
 		try {
 			/*
 			 * If display queue is empty, wait for a while. There is nothing
@@ -63,8 +67,12 @@ public class DisplayQueueManager extends TimerTask {
 		}
 	}
 
-	private void prepareAndShow(Photo p) {
-		Bitmap bm = loadPhoto(p);
+	public boolean isInQueue(Photo p) {
+		return queue.contains(p);
+	}
+	
+	public void prepareAndShow(Photo p) {
+		Bitmap bm = dao.loadImageFromCache(p);
 		if (bm == null) {
 			return;
 		}
@@ -73,40 +81,6 @@ public class DisplayQueueManager extends TimerTask {
 		} else {
 			mainActivity = null; //Last run
 		}
-	}
-
-	private Bitmap loadPhoto(Photo p) {
-		File cacheFile = dao.getCachedFile(p);
-		
-		return decodeFile(cacheFile);
-	}
-
-	private Bitmap decodeFile(File f) {
-		try {
-			/*
-			 * // decode image size BitmapFactory.Options o = new
-			 * BitmapFactory.Options(); o.inJustDecodeBounds = true;
-			 * BitmapFactory.decodeStream(new FileInputStream(f), null, o);
-			 * 
-			 * // Find the correct scale value. It should be the power of 2.
-			 * final int REQUIRED_SIZE = 70; int width_tmp = o.outWidth,
-			 * height_tmp = o.outHeight; int scale = 1; while (true) { if
-			 * (width_tmp / 2 < REQUIRED_SIZE || height_tmp / 2 < REQUIRED_SIZE)
-			 * break; width_tmp /= 2; height_tmp /= 2; scale *= 2; }
-			 */
-			Logger.v("Loading photo from cache: " + f.getName());
-			// decode with inSampleSize
-			BitmapFactory.Options o2 = new BitmapFactory.Options();
-			// o2.inSampleSize = scale;
-			InputStream is = new FileInputStream(f);
-			Bitmap bm = BitmapFactory.decodeStream(is, null, o2);
-			is.close();
-
-			return bm;
-		} catch (Exception e) {
-			Logger.v("Failed to load image", e);
-		}
-		return null;
 	}
 
 	public void addToQueue(Photo p) {
@@ -156,26 +130,5 @@ public class DisplayQueueManager extends TimerTask {
 	public void resume() {
 		Logger.v("DisplayQueueManager resuming");
 		taskFuture = timer.scheduleWithFixedDelay(this, 0, getInterval(), TimeUnit.SECONDS);
-	}
-
-	class ImmediateProcessor extends AsyncTask<Void, Void, Void> {
-		private Photo photo;
-		
-		ImmediateProcessor(Photo p) {
-			this.photo = p;
-		}
-		protected Void doInBackground(Void... params) {
-			Logger.v("Showing immediate: " + photo.getId());
-			prepareAndShow(photo);
-			return null;
-		}
-	}
-	
-	/*
-	 * Can be called from main thread. Loads photo in the timer's thread
-	 * and shows the photo in ImageView from main thread.
-	 */
-	public void showImmediate(Photo p) {
-		new ImmediateProcessor(p).execute();
 	}
 }

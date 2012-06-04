@@ -1,6 +1,8 @@
 package com.webage.flickr;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -9,6 +11,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.preference.PreferenceManager;
 import android.util.DisplayMetrics;
 import android.view.WindowManager;
@@ -45,6 +49,40 @@ public class PhotoDAO {
 		}
 		
 		return dir;
+	}
+	
+	public Bitmap loadImageFromCache(Photo p) {
+		File cacheFile = getCachedFile(p);
+		
+		return decodeFile(cacheFile);
+	}
+
+	private Bitmap decodeFile(File f) {
+		try {
+			/*
+			 * // decode image size BitmapFactory.Options o = new
+			 * BitmapFactory.Options(); o.inJustDecodeBounds = true;
+			 * BitmapFactory.decodeStream(new FileInputStream(f), null, o);
+			 * 
+			 * // Find the correct scale value. It should be the power of 2.
+			 * final int REQUIRED_SIZE = 70; int width_tmp = o.outWidth,
+			 * height_tmp = o.outHeight; int scale = 1; while (true) { if
+			 * (width_tmp / 2 < REQUIRED_SIZE || height_tmp / 2 < REQUIRED_SIZE)
+			 * break; width_tmp /= 2; height_tmp /= 2; scale *= 2; }
+			 */
+			Logger.v("Loading photo from cache: " + f.getName());
+			// decode with inSampleSize
+			BitmapFactory.Options o2 = new BitmapFactory.Options();
+			// o2.inSampleSize = scale;
+			InputStream is = new FileInputStream(f);
+			Bitmap bm = BitmapFactory.decodeStream(is, null, o2);
+			is.close();
+
+			return bm;
+		} catch (Exception e) {
+			Logger.v("Failed to load image", e);
+		}
+		return null;
 	}
 	
 	public int getPrefAsInt(String key, int defaultValue) {
