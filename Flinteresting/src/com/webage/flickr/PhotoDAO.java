@@ -17,6 +17,7 @@ import android.preference.PreferenceManager;
 import android.util.DisplayMetrics;
 import android.view.WindowManager;
 
+import com.webage.flickrcast.R;
 import com.webage.util.Logger;
 import com.webage.util.XMLHttpRequestEventTarget;
 import com.webage.util.XmlHttpRequest;

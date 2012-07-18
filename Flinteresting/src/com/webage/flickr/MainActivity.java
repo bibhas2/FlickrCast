@@ -8,13 +8,16 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.view.GestureDetector;
+import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.Gravity;
 import android.view.Menu;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.View.OnTouchListener;
 import android.view.animation.TranslateAnimation;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -22,6 +25,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.webage.flickrcast.R;
 import com.webage.util.Logger;
 
 public class MainActivity extends Activity {
@@ -36,6 +40,32 @@ public class MainActivity extends Activity {
 	boolean menuShown = true;
 	ExecutorService threadPool;
 
+	private static final int SWIPE_MIN_DISTANCE = 70;
+	private static final int SWIPE_MAX_OFF_PATH = 250;
+	private static final int SWIPE_THRESHOLD_VELOCITY = 200;
+	GestureDetector gestureDetector;
+	    
+    class MyGestureDetector extends SimpleOnGestureListener {
+        @Override
+        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+            try {
+                if (Math.abs(e1.getY() - e2.getY()) > SWIPE_MAX_OFF_PATH)
+                    return false;
+                // right to left swipe
+                if(e1.getX() - e2.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
+                    onLeftFling();
+                    return true;
+                }  else if (e2.getX() - e1.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
+                	onRightFling();
+                	return true;
+                }
+            } catch (Exception e) {
+                // nothing
+            }
+            return false;
+        }
+    }
+    
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		Logger.v("MainActivity onCreate called: "
@@ -92,6 +122,14 @@ public class MainActivity extends Activity {
 
 		threadPool = Executors.newCachedThreadPool();
 
+		//Setup gesture handler
+		gestureDetector = new GestureDetector(new MyGestureDetector());
+		imageView.setOnTouchListener(new OnTouchListener() {
+			public boolean onTouch(View v, MotionEvent event) {
+				return gestureDetector.onTouchEvent(event);
+			}
+		});
+		
 		// Hide menu after 1s.
 		Handler h = new Handler();
 		h.postDelayed(new Runnable() {
@@ -99,6 +137,18 @@ public class MainActivity extends Activity {
 				manageMenu();
 			}
 		}, 1000);
+	}
+
+	public void onRightFling() {
+		Logger.v("****Right fling");
+		reqMgr.getDisplayManager().stopTimer();
+		showPreviousImage();
+	}
+
+	public void onLeftFling() {
+		Logger.v("****Left fling");
+		reqMgr.getDisplayManager().stopTimer();
+		showNextImage();
 	}
 
 	protected void openSettings() {
@@ -218,6 +268,14 @@ public class MainActivity extends Activity {
 	 */
 	public void postDisplayRequest(Photo p, Bitmap bm) {
 		Logger.v("Received request to display photo: " + p.getId());
+		
+		if (bm == null) {
+			//Cache is bad!
+			Logger.v("Could not load from cache. Skipping: " + p.getId());
+			if (menuShown == false) {
+				reqMgr.getDisplayManager().startTimer();
+			}
+		}
 
 		currentPhoto = p;
 		currentBitmap = bm;
@@ -237,6 +295,10 @@ public class MainActivity extends Activity {
 		progressBar.setVisibility(View.GONE);
 		imageView.setImageBitmap(currentBitmap);
 		titleText.setText(currentPhoto.getTitle());
+		Logger.v("Displayed photo: " + currentPhoto.getId());
+		if (menuShown == false) {
+			reqMgr.getDisplayManager().startTimer();
+		}
 	}
 
 	@Override

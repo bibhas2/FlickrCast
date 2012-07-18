@@ -3,6 +3,7 @@ package com.webage.flickr;
 import android.os.Bundle;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
+import com.webage.flickrcast.R;
 
 public class SettingsEditorActivity extends PreferenceActivity {
 

@@ -1,5 +1,7 @@
 package com.webage.flickr;
 
+import com.webage.flickrcast.R;
+
 public class Photo {
 	String url;
 	String title;

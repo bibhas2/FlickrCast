@@ -14,16 +14,24 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
 
+import com.webage.flickrcast.R;
 import com.webage.util.Logger;
 
 public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 	public static final int MAX_SIZE = 10;
 	private static final int DEFAULT_CACHE_DURATION = 1;
+	public static final int MAX_CYCLES = 1;
+	
+	public static final int CYCLE_END = 1;
+	public static final int CYCLE_ERROR = 2;
+	public static final int CYCLE_CANCEL = 3;
+	
 	//This queue is unbounded
 	MainActivity mainActivity;
 	DisplayQueueManager displayMgr;
 	PhotoDAO dao;
 	int currentIndex = 0;
+	int numCycles = 0;
 	ArrayList<Photo> photoList = null;
 
 	public RequestQueueManager(MainActivity a) {
@@ -35,13 +43,26 @@ public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 	protected Void doInBackground(Void... params) {
 		Logger.v("RequestQueueManager starting up.");
 		//Start the display queue manager
-		displayMgr.execute();
+		displayMgr.startTimer();
 		
+		int endStatus = 0;
+		do {
+			Logger.v("****Starting cycle.");
+			endStatus = startCycle();
+		} while (endStatus == CYCLE_END);
+		
+		Logger.v("RequestQueueManager ending work. End status: " + endStatus);
+		mainActivity = null;
+		
+		return null;
+	}
+
+	private int startCycle() {
 		//Get master list
 		photoList = dao.fetchInterestingList();
 		if (photoList == null) {
 			mainActivity.postMessage("Failed to connect to Flickr");
-			return null;
+			return CYCLE_ERROR;
 		}
 		//Purge cache
 		purgeCache();
@@ -59,12 +80,13 @@ public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 			++currentIndex;
 			if (currentIndex == photoList.size()) {
 				currentIndex = 0;
+				++numCycles;
+				if (numCycles == MAX_CYCLES) {
+					return CYCLE_END;
+				}
 			}
 		}
-		Logger.v("RequestQueueManager ending work.");
-		mainActivity = null;
-		
-		return null;
+		return CYCLE_CANCEL;
 	}
 
 	public void shutdown() {
@@ -215,10 +237,10 @@ public class RequestQueueManager extends AsyncTask<Void, Void, Void> {
 		 * Just pause the display queue manager. This will eventually fill up
 		 * the display queue and this thread will be blocked.
 		 */
-		displayMgr.pause();
+		displayMgr.stopTimer();
 	}
 	public void resume() {
-		displayMgr.resume();
+		displayMgr.startTimer();
 	}
 
 	public DisplayQueueManager getDisplayManager() {

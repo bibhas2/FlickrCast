@@ -16,6 +16,7 @@ import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Handler;
 
+import com.webage.flickrcast.R;
 import com.webage.util.Logger;
 
 public class DisplayQueueManager extends TimerTask {
@@ -33,11 +34,11 @@ public class DisplayQueueManager extends TimerTask {
 	public DisplayQueueManager(MainActivity a) {
 		mainActivity = a;
 		dao = new PhotoDAO(mainActivity);
+		timer = Executors.newSingleThreadScheduledExecutor();
 	}
 
 	public void run() {
 		Logger.v("Display queue manager timer fired.");
-
 		showNextInQueue();
 	}
 
@@ -72,13 +73,16 @@ public class DisplayQueueManager extends TimerTask {
 	}
 	
 	public void prepareAndShow(Photo p) {
+		Logger.v("Preparing for display: " + p.getId());
 		Bitmap bm = dao.loadImageFromCache(p);
 		if (bm == null) {
-			return;
+			Logger.v("Failed to load from cache: " + p.getId());
 		}
 		if (!cancelled) {
+			Logger.v("Posting display request: " + p.getId());
 			mainActivity.postDisplayRequest(p, bm);
 		} else {
+			Logger.v("Not posting display request: " + p.getId());
 			mainActivity = null; //Last run
 		}
 	}
@@ -93,12 +97,12 @@ public class DisplayQueueManager extends TimerTask {
 		} catch (InterruptedException e) {
 			Logger.v("Failed to put image in queue", e);
 		}
+		Logger.v("Added to display queue");
 	}
 
-	public void execute() {
-		Logger.v("DisplayQueueManager strating up.");
-		timer = Executors.newSingleThreadScheduledExecutor();
-		taskFuture = timer.scheduleWithFixedDelay(this, getInterval(), getInterval(), TimeUnit.SECONDS);
+	public void startTimer() {
+		Logger.v("DisplayQueueManager starting timer.");
+		taskFuture = timer.schedule(this, getInterval(), TimeUnit.SECONDS);
 	}
 
 	public void shutdown() {
@@ -119,16 +123,11 @@ public class DisplayQueueManager extends TimerTask {
 		return dao.getPrefAsInt("show_speed", DEFAULT_SHOW_INTERVAL);
 	}
 
-	public void pause() {
-		Logger.v("DisplayQueueManager pausing");
+	public void stopTimer() {
+		Logger.v("DisplayQueueManager stopping timer");
 		if (taskFuture != null) {
 			taskFuture.cancel(false);
 			taskFuture = null;
 		}
-	}
-	
-	public void resume() {
-		Logger.v("DisplayQueueManager resuming");
-		taskFuture = timer.scheduleWithFixedDelay(this, 0, getInterval(), TimeUnit.SECONDS);
 	}
 }
